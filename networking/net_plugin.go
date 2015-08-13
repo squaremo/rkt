@@ -15,16 +15,14 @@
 package networking
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/appc/cni/pkg/invoke"
+	"github.com/appc/cni/pkg/types"
 
 	"github.com/coreos/rkt/common"
 )
@@ -33,46 +31,22 @@ import (
 const UserNetPluginsPath = "/usr/lib/rkt/plugins/net"
 const BuiltinNetPluginsPath = "usr/lib/rkt/plugins/net"
 
-func pluginErr(err error, output []byte) error {
-	if _, ok := err.(*exec.ExitError); ok {
-		emsg := plugin.Error{}
-		if perr := json.Unmarshal(output, &emsg); perr != nil {
-			return fmt.Errorf("netplugin failed but error parsing its diagnostic message %q: %v", string(output), perr)
-		}
-		details := ""
-		if emsg.Details != "" {
-			details = fmt.Sprintf("; %v", emsg.Details)
-		}
-		return fmt.Errorf("%v%v", emsg.Msg, details)
-	}
-
-	return err
-}
-
 func (e *podEnv) netPluginAdd(n *activeNet, netns string) (ip, hostIP net.IP, err error) {
-	output, err := e.execNetPlugin("ADD", n, netns)
+	result, err := e.execNetPlugin("ADD", n, netns)
 	if err != nil {
-		return nil, nil, pluginErr(err, output)
+		return nil, nil, err
 	}
 
-	pr := plugin.Result{}
-	if err = json.Unmarshal(output, &pr); err != nil {
-		return nil, nil, fmt.Errorf("error parsing %q result: %v", n.conf.Name, err)
-	}
-
-	if pr.IP4 == nil {
+	if result.IP4 == nil {
 		return nil, nil, fmt.Errorf("net-plugin returned no IPv4 configuration")
 	}
 
-	return pr.IP4.IP.IP, pr.IP4.Gateway, nil
+	return result.IP4.IP.IP, result.IP4.Gateway, nil
 }
 
 func (e *podEnv) netPluginDel(n *activeNet, netns string) error {
-	output, err := e.execNetPlugin("DEL", n, netns)
-	if err != nil {
-		return pluginErr(err, output)
-	}
-	return nil
+	_, err := e.execNetPlugin("DEL", n, netns)
+	return err
 }
 
 func (e *podEnv) pluginPaths() []string {
@@ -84,14 +58,7 @@ func (e *podEnv) pluginPaths() []string {
 }
 
 func (e *podEnv) findNetPlugin(plugin string) string {
-	for _, p := range e.pluginPaths() {
-		fullname := filepath.Join(p, plugin)
-		if fi, err := os.Stat(fullname); err == nil && fi.Mode().IsRegular() {
-			return fullname
-		}
-	}
-
-	return ""
+	return invoke.FindInPath(plugin, e.pluginPaths())
 }
 
 func envVars(vars [][2]string) []string {
@@ -104,7 +71,7 @@ func envVars(vars [][2]string) []string {
 	return env
 }
 
-func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) ([]byte, error) {
+func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) (*types.Result, error) {
 	pluginPath := e.findNetPlugin(n.conf.Type)
 	if pluginPath == "" {
 		return nil, fmt.Errorf("Could not find plugin %q", n.conf.Type)
@@ -118,19 +85,5 @@ func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) ([]byte, 
 		{"CNI_IFNAME", n.runtime.IfName},
 		{"CNI_PATH", strings.Join(e.pluginPaths(), ":")},
 	}
-
-	stdin := bytes.NewBuffer(n.confBytes)
-	stdout := &bytes.Buffer{}
-
-	c := exec.Cmd{
-		Path:   pluginPath,
-		Args:   []string{pluginPath},
-		Env:    envVars(vars),
-		Stdin:  stdin,
-		Stdout: stdout,
-		Stderr: os.Stderr,
-	}
-
-	err := c.Run()
-	return stdout.Bytes(), err
+	return invoke.ExecPlugin(pluginPath, n.confBytes, envVars(vars))
 }
