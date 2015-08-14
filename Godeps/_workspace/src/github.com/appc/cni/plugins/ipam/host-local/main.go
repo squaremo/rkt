@@ -17,8 +17,8 @@ package main
 import (
 	"errors"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/ipam/host-local/backend/disk"
 )
 
@@ -43,7 +43,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
-	var ipConf *plugin.IPConfig
+	var ipConf *types.IPConfig
 
 	switch ipamConf.Type {
 	case "host-local":
@@ -58,7 +58,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
-	r := &plugin.Result{
+	r := &types.Result{
 		IP4: ipConf,
 	}
 	return r.Print()

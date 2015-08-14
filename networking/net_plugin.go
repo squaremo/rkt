@@ -21,9 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/appc/cni/pkg/invoke"
-	"github.com/appc/cni/pkg/types"
-
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/invoke"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/common"
 )
 

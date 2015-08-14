@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/d2g/dhcp4"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/d2g/dhcp4client"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
@@ -284,7 +284,7 @@ func (l *DHCPLease) Gateway() net.IP {
 	return parseRouter(l.opts)
 }
 
-func (l *DHCPLease) Routes() []plugin.Route {
+func (l *DHCPLease) Routes() []types.Route {
 	routes := parseRoutes(l.opts)
 	return append(routes, parseCIDRRoutes(l.opts)...)
 }

@@ -19,7 +19,7 @@ import (
 	"net"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/ipam/host-local/backend"
 )
 
@@ -69,7 +69,7 @@ func validateRangeIP(ip net.IP, ipnet *net.IPNet) error {
 }
 
 // Returns newly allocated IP along with its config
-func (a *IPAllocator) Get(id string) (*plugin.IPConfig, error) {
+func (a *IPAllocator) Get(id string) (*types.IPConfig, error) {
 	a.store.Lock()
 	defer a.store.Unlock()
 
@@ -89,7 +89,7 @@ func (a *IPAllocator) Get(id string) (*plugin.IPConfig, error) {
 			return nil, err
 		}
 		if reserved {
-			return &plugin.IPConfig{
+			return &types.IPConfig{
 				IP:      net.IPNet{cur, a.conf.Subnet.Mask},
 				Gateway: gw,
 				Routes:  a.conf.Routes,
@@ -102,7 +102,7 @@ func (a *IPAllocator) Get(id string) (*plugin.IPConfig, error) {
 
 // Allocates both an IP and the Gateway IP, i.e. a /31
 // This is used for Point-to-Point links
-func (a *IPAllocator) GetPtP(id string) (*plugin.IPConfig, error) {
+func (a *IPAllocator) GetPtP(id string) (*types.IPConfig, error) {
 	a.store.Lock()
 	defer a.store.Unlock()
 
@@ -132,7 +132,7 @@ func (a *IPAllocator) GetPtP(id string) (*plugin.IPConfig, error) {
 				_, bits := a.conf.Subnet.Mask.Size()
 				mask := net.CIDRMask(bits-1, bits)
 
-				return &plugin.IPConfig{
+				return &types.IPConfig{
 					IP:      net.IPNet{cur, mask},
 					Gateway: gw,
 					Routes:  a.conf.Routes,
