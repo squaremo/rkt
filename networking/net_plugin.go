@@ -17,7 +17,6 @@ package networking
 import (
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -60,29 +59,19 @@ func (e *podEnv) findNetPlugin(plugin string) string {
 	return invoke.FindInPath(plugin, e.pluginPaths())
 }
 
-func envVars(vars [][2]string) []string {
-	env := os.Environ()
-
-	for _, kv := range vars {
-		env = append(env, strings.Join(kv[:], "="))
-	}
-
-	return env
-}
-
 func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) (*types.Result, error) {
 	pluginPath := e.findNetPlugin(n.conf.Type)
 	if pluginPath == "" {
 		return nil, fmt.Errorf("Could not find plugin %q", n.conf.Type)
 	}
 
-	vars := [][2]string{
-		{"CNI_COMMAND", cmd},
-		{"CNI_CONTAINERID", e.podID.String()},
-		{"CNI_NETNS", netns},
-		{"CNI_ARGS", n.runtime.Args},
-		{"CNI_IFNAME", n.runtime.IfName},
-		{"CNI_PATH", strings.Join(e.pluginPaths(), ":")},
+	args := &invoke.Args{
+		Command:       cmd,
+		ContainerID:   e.podID.String(),
+		NetNS:         netns,
+		PluginArgsStr: n.runtime.Args,
+		IfName:        n.runtime.IfName,
+		Path:          strings.Join(e.pluginPaths(), ":"),
 	}
-	return invoke.ExecPlugin(pluginPath, n.confBytes, envVars(vars))
+	return invoke.ExecPlugin(pluginPath, n.confBytes, args)
 }
